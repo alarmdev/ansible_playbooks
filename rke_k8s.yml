@@ -1,0 +1,52 @@
+---
+auth:
+  strategy: x509
+
+network:
+  plugin: flannel
+
+ssh_key_path: /home/ansible/.ssh/id_rsa
+
+nodes:
+  - address: test-server-01
+    user: ansible
+    role: [controlplane, etcd]
+  - address: test-server-02
+    user: ansible
+    role: [worker]
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:latest
+  kube-api:
+    image: rancher/k8s:v1.8.3-rancher2
+    service_cluster_ip_range: 10.20.0.0/18
+    extra_args:
+      v: 4
+  kube-controller:
+    image: rancher/k8s:v1.8.3-rancher2
+    cluster_cidr: 10.20.64.0/18
+    service_cluster_ip_range: 10.20.0.0/18
+  scheduler:
+    image: rancher/k8s:v1.8.3-rancher2
+  kubelet:
+    image: rancher/k8s:v1.8.3-rancher2
+    cluster_domain: cluster.local
+    cluster_dns_server: 10.233.0.3
+    infra_container_image: gcr.io/google_containers/pause-amd64:3.0
+  kubeproxy:
+    image: rancher/k8s:v1.8.3-rancher2
+
+addons: |-
+    ---
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: my-nginx
+      namespace: default
+    spec:
+      containers:
+      - name: my-nginx
+        image: nginx
+        ports:
+        - containerPort: 80
