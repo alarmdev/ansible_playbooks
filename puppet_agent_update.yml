@@ -1,0 +1,49 @@
+The playbook is intented to migrate puppet from 3.4 to 3.8 on centOS based Linux servers.
+
+- name: Puppet Agent Reconfigure/Restart
+  hosts: all
+  gather_facts: no
+  become: true
+  become_method: sudo
+  max_fail_percentage: 0
+
+
+# Different tasks exectued on remote host.
+  tasks:
+
+# Copy new puppet.conf file
+  - name: Copy new puppet.conf
+    tags: copyConf
+    copy: src=puppet_prod.conf dest=/etc/puppet/puppet.conf owner=root group=root mode=0644
+    register: copyPupFile
+
+  - name: "Start puppet agent"
+    shell: /usr/bin/puppet agent --test --verbose --detailed-exitcodes
+    register: puppet_agent
+    changed_when: puppet_agent.rc == 2
+    failed_when: puppet_agent.rc != 2 and puppet_agent.rc != 0
+
+  - name: "puppet output"
+    debug: var=puppet_agent.stdout_lines
+    when: puppet_agent|failed
+
+# Make sure puppet is running.
+  - name: Make sure puppet runs
+    tags: enablePuppet
+    service: name=puppet state=started enabled=yes
+    ignore_errors: yes
+
+# set facterlib
+  - name: Set Facter Lib
+    tags: setFactLib
+    shell: "{{ item }}"
+    with_items:
+      - source /etc/environment
+
+# Verify puppet migration
+  - name: Verify Migration
+    tags: verifyMigration
+    shell: facter
+    register: verifyMigration
+  - debug:
+      msg: "Puppet migration completed {{ verifyMigration.stdout }}"
