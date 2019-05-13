@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Drain K8S Node
+      command: /usr/local/bin/kubectl drain --force --ignore-daemonsets {{ inventory_hostname }}
+      delegate_to: localhost
