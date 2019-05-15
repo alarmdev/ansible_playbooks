@@ -1,0 +1,45 @@
+---
+# create a new VM from a template
+
+- name: VM from template
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars_prompt:
+    - name: "vsphere_password"
+      prompt: "vSphere Password"
+    - name: "notes"
+      prompt: "VM notes"
+      private: no
+      default: "Deployed with ansible"
+  vars:
+    datastore: vm_nfs_stage
+    vmtemplate: centOS7
+    name: "newvm"
+    notes: Ansible Test
+    dumpfacts: False
+  tasks:
+    - name: Create VM from template
+      vmware_guest:
+        hostname: '{{ VCenter }}'
+        username: '{{ username }}'
+        password: "{{ password }}"
+        datacenter: DC01
+        name: "{{ name }}"
+        template: "{{ datastore }}"
+        disk:
+          - size_gb: "{{ disk_size | default(30) }}"
+            type: thin
+            datastore: "{{ datastore }}"
+        networks:
+        - name: VM Network
+          type: dhcp
+        hardware:
+          memory_mb: "{{ vm_memory | default(1024) }}"
+        wait_for_ip_address: True
+        state: present
+      register: newvm
+
+    - name: IP address info
+      debug:
+        msg: "{{ newvm.instance.ipv4 }} {{ name }}"
